@@ -65,7 +65,7 @@ pub struct DeliveryMetrics {
 }
 
 #[derive(Debug, Clone)]
-struct AssignmentMetrics {
+pub struct AssignmentMetrics {
     assignment_id: Uuid,
     delivery_person_id: Uuid,
     order_id: Uuid,
@@ -465,7 +465,17 @@ impl DeliveryMetrics {
         };
 
         let mut assignments = self.active_assignments.write().await;
-        assignments.insert(assignment_id, metrics);
+        assignments.insert(assignment_id, metrics.clone());
+        
+        // Log assignment tracking with all relevant details
+        tracing::info!(
+            "Tracking assignment {} for order {} assigned to delivery person {} with vehicle {:?}, ETA: {:?}",
+            metrics.assignment_id,
+            metrics.order_id,
+            metrics.delivery_person_id,
+            metrics.vehicle_type,
+            metrics.estimated_delivery_time
+        );
     }
 
     pub async fn update_assignment_status(
@@ -516,5 +526,30 @@ impl DeliveryMetrics {
     pub async fn get_active_assignment_count(&self) -> usize {
         let assignments = self.active_assignments.read().await;
         assignments.len()
+    }
+
+    /// Get assignment details by assignment ID
+    pub async fn get_assignment_details(&self, assignment_id: Uuid) -> Option<AssignmentMetrics> {
+        let assignments = self.active_assignments.read().await;
+        assignments.get(&assignment_id).cloned()
+    }
+
+    /// Get all assignments for a specific delivery person
+    pub async fn get_assignments_for_delivery_person(&self, delivery_person_id: Uuid) -> Vec<AssignmentMetrics> {
+        let assignments = self.active_assignments.read().await;
+        assignments
+            .values()
+            .filter(|metrics| metrics.delivery_person_id == delivery_person_id)
+            .cloned()
+            .collect()
+    }
+
+    /// Get assignment details for a specific order
+    pub async fn get_assignment_for_order(&self, order_id: Uuid) -> Option<AssignmentMetrics> {
+        let assignments = self.active_assignments.read().await;
+        assignments
+            .values()
+            .find(|metrics| metrics.order_id == order_id)
+            .cloned()
     }
 }

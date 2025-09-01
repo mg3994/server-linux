@@ -614,14 +614,30 @@ impl DeliveryService {
         let pickup_lng: f64 = order_details.pickup_address["longitude"].as_f64().unwrap_or(0.0);
         let max_dist = max_distance_km.unwrap_or(10.0);
 
+        tracing::info!(
+            "Finding delivery person for order {} at location ({}, {}) within {} km",
+            order_details.order_id,
+            pickup_lat,
+            pickup_lng,
+            max_dist
+        );
+
         let nearby_persons = self.get_nearby_delivery_persons(pickup_lat, pickup_lng, max_dist).await?;
         
         if nearby_persons.is_empty() {
+            tracing::warn!("No available delivery persons found for order {}", order_details.order_id);
             return Err(AppError::NotFound("No available delivery persons found".to_string()));
         }
 
+        let selected_person_id = nearby_persons[0].delivery_person.id;
+        tracing::info!(
+            "Selected delivery person {} for order {}",
+            selected_person_id,
+            order_details.order_id
+        );
+
         // Return the closest available delivery person
-        Ok(nearby_persons[0].delivery_person.id)
+        Ok(selected_person_id)
     }
 
     async fn update_delivery_person_availability(&self, delivery_person_id: Uuid, is_available: bool) -> Result<()> {

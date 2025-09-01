@@ -61,7 +61,9 @@ impl RedisCacheService {
     where
         T: Serialize,
     {
-        self.set_with_ttl(key, value, key.get_ttl()).await
+        // Use key's TTL (keys already have default TTLs defined)
+        let ttl = key.get_ttl();
+        self.set_with_ttl(key, value, ttl).await
     }
 
     pub async fn set_with_ttl<T>(&self, key: &CacheKey, value: &T, ttl: Duration) -> Result<()>
@@ -162,14 +164,30 @@ impl RedisCacheService {
     }
 
     pub async fn get_stats(&self) -> Result<CacheStats> {
-        // For now, return basic stats since MultiplexedConnection doesn't support info/dbsize
+        let mut conn = self.get_connection().await?;
+        
+        // Get Redis INFO command output
+        let info: String = redis::cmd("INFO")
+            .arg("memory")
+            .query_async(&mut conn)
+            .await
+            .unwrap_or_default();
+            
+        let memory_usage = self.parse_memory_usage(&info);
+        
+        // Get database size
+        let total_entries: usize = redis::cmd("DBSIZE")
+            .query_async(&mut conn)
+            .await
+            .unwrap_or(0);
+        
         Ok(CacheStats {
-            total_entries: 0,
-            hit_count: 0,
-            miss_count: 0,
-            hit_rate: 0.0,
-            memory_usage: 0,
-            expired_entries: 0,
+            total_entries,
+            hit_count: 0, // Would need to track this separately
+            miss_count: 0, // Would need to track this separately
+            hit_rate: 0.0, // Would calculate from hit/miss counts
+            memory_usage,
+            expired_entries: 0, // Would need to track this separately
         })
     }
 

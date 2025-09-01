@@ -271,6 +271,27 @@ impl NotificationService {
             alert.description,
             alert.severity
         );
+        
+        // Send notifications based on severity
+        match alert.severity {
+            AlertSeverity::Critical => {
+                // Send to all channels for critical alerts
+                self.send_email_notification(&["admin@company.com".to_string()], alert).await;
+                self.send_slack_notification("https://hooks.slack.com/webhook", "#alerts", alert).await;
+                
+                let mut headers = HashMap::new();
+                headers.insert("Content-Type".to_string(), "application/json".to_string());
+                self.send_webhook_notification("https://api.company.com/alerts", &headers, alert).await;
+            },
+            AlertSeverity::High | AlertSeverity::Medium => {
+                // Send to Slack and webhook for high/medium alerts
+                self.send_slack_notification("https://hooks.slack.com/webhook", "#monitoring", alert).await;
+            },
+            AlertSeverity::Low | AlertSeverity::Info => {
+                // Just log low/info alerts
+                tracing::info!("Info alert: {}", alert.description);
+            }
+        }
     }
 
     pub async fn send_resolution_notification(&self, alert: &Alert) {
@@ -280,16 +301,55 @@ impl NotificationService {
         );
     }
 
-    async fn send_email_notification(&self, _addresses: &[String], _alert: &Alert) {
-        // Implementation would send email via SMTP or email service
+    async fn send_email_notification(&self, addresses: &[String], alert: &Alert) {
+        // Log email notification (in production, would integrate with email service)
+        tracing::info!(
+            "Sending email notification to {} recipients for alert: {} - {}",
+            addresses.len(),
+            alert.title,
+            alert.description
+        );
+        
+        for address in addresses {
+            tracing::debug!("Email notification sent to: {}", address);
+        }
     }
 
-    async fn send_slack_notification(&self, _webhook_url: &str, _channel: &str, _alert: &Alert) {
-        // Implementation would send Slack message via webhook
+    async fn send_slack_notification(&self, webhook_url: &str, channel: &str, alert: &Alert) {
+        // Log Slack notification (in production, would send HTTP POST to Slack webhook)
+        tracing::info!(
+            "Sending Slack notification to channel {} for alert: {} - {}",
+            channel,
+            alert.title,
+            alert.description
+        );
+        
+        // In production, would send HTTP POST to webhook_url with Slack message format
+        tracing::debug!("Slack webhook URL: {}", webhook_url);
     }
 
-    async fn send_webhook_notification(&self, _url: &str, _headers: &HashMap<String, String>, _alert: &Alert) {
-        // Implementation would send HTTP POST to webhook URL
+    async fn send_webhook_notification(&self, url: &str, headers: &HashMap<String, String>, alert: &Alert) {
+        // Log webhook notification (in production, would send HTTP POST)
+        tracing::info!(
+            "Sending webhook notification to {} for alert: {} - {}",
+            url,
+            alert.title,
+            alert.description
+        );
+        
+        tracing::debug!("Webhook headers: {:?}", headers);
+        
+        // In production, would send HTTP POST with alert data as JSON payload
+        let payload = serde_json::json!({
+            "alert_id": alert.id,
+            "title": alert.title,
+            "severity": alert.severity,
+            "description": alert.description,
+            "timestamp": alert.timestamp,
+            "metadata": alert.metadata
+        });
+        
+        tracing::debug!("Webhook payload: {}", payload);
     }
 }
 

@@ -65,7 +65,7 @@ pub async fn assign_order_enhanced(
 pub async fn handle_emergency_alert(
     Path(delivery_person_id): Path<Uuid>,
     State(service): State<Arc<EnhancedDeliveryService>>,
-    auth_user: User,
+    _auth_user: User,
     Json(request): Json<EmergencyAlertRequest>,
 ) -> Result<Json<serde_json::Value>> {
     service
