@@ -113,6 +113,7 @@ impl FirebaseAuth {
             display_name: None,
             photo_url: None,
             provider,
+            role: "customer".to_string(), // Default role
             created_at: now,
             updated_at: now,
         }

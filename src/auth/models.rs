@@ -12,6 +12,7 @@ pub struct User {
     pub display_name: Option<String>,
     pub photo_url: Option<String>,
     pub provider: AuthProvider,
+    pub role: String, // customer, restaurant, delivery_person, admin
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }

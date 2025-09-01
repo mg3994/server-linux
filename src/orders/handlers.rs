@@ -206,4 +206,80 @@ pub async fn update_order_status(
         order,
         message: "Order status updated successfully".to_string(),
     }))
+}pub 
+async fn get_customer_orders(
+    Path(customer_id): Path<Uuid>,
+    Extension(user): Extension<User>,
+) -> Result<Json<Vec<Order>>> {
+    // Ensure user can only access their own orders or is authorized
+    if user.id != customer_id {
+        return Err(crate::error::AppError::Unauthorized);
+    }
+
+    // Mock customer orders - in real app, fetch from database
+    let now = chrono::Utc::now();
+    let orders = vec![
+        Order {
+            id: Uuid::new_v4(),
+            customer_id,
+            restaurant_id: Uuid::new_v4(),
+            delivery_person_id: Some(Uuid::new_v4()),
+            items: vec![],
+            status: OrderStatus::Delivered,
+            total_amount: 25.99,
+            delivery_address: crate::orders::models::Address {
+                street: "456 Customer Ave".to_string(),
+                city: "User City".to_string(),
+                state: "UC".to_string(),
+                postal_code: "67890".to_string(),
+                country: "US".to_string(),
+                latitude: Some(40.7589),
+                longitude: Some(-73.9851),
+            },
+            restaurant_address: crate::orders::models::Address {
+                street: "123 Restaurant St".to_string(),
+                city: "Food City".to_string(),
+                state: "FC".to_string(),
+                postal_code: "12345".to_string(),
+                country: "US".to_string(),
+                latitude: Some(40.7128),
+                longitude: Some(-74.0060),
+            },
+            created_at: now - chrono::Duration::hours(2),
+            updated_at: now - chrono::Duration::hours(1),
+            estimated_delivery_time: Some(now - chrono::Duration::hours(1)),
+        },
+        Order {
+            id: Uuid::new_v4(),
+            customer_id,
+            restaurant_id: Uuid::new_v4(),
+            delivery_person_id: None,
+            items: vec![],
+            status: OrderStatus::Preparing,
+            total_amount: 18.50,
+            delivery_address: crate::orders::models::Address {
+                street: "456 Customer Ave".to_string(),
+                city: "User City".to_string(),
+                state: "UC".to_string(),
+                postal_code: "67890".to_string(),
+                country: "US".to_string(),
+                latitude: Some(40.7589),
+                longitude: Some(-73.9851),
+            },
+            restaurant_address: crate::orders::models::Address {
+                street: "789 Food Plaza".to_string(),
+                city: "Food City".to_string(),
+                state: "FC".to_string(),
+                postal_code: "12345".to_string(),
+                country: "US".to_string(),
+                latitude: Some(40.7505),
+                longitude: Some(-73.9934),
+            },
+            created_at: now - chrono::Duration::minutes(30),
+            updated_at: now - chrono::Duration::minutes(15),
+            estimated_delivery_time: Some(now + chrono::Duration::minutes(20)),
+        },
+    ];
+
+    Ok(Json(orders))
 }

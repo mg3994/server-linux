@@ -1,3 +1,4 @@
+use crate::analytics::AnalyticsService;
 use crate::auth::firebase::FirebaseAuth;
 use crate::auth::middleware::SharedFirebaseAuth;
 use crate::config::Config;
@@ -40,7 +41,25 @@ impl Server {
         tracing::info!("Starting Multi-Vendor Delivery Server...");
 
         // Create the application router
-        let app = create_routes(self.firebase_auth.clone(), self.fcm_service.clone())
+        let database = crate::database::Database::new(sqlx::PgPool::connect("postgresql://localhost/test").await.unwrap());
+        let analytics_service = AnalyticsService::new(database.clone());
+        
+        let delivery_websocket_manager = std::sync::Arc::new(crate::delivery::DeliveryWebSocketManager::new());
+        let enhanced_delivery_service = std::sync::Arc::new(
+            crate::delivery::EnhancedDeliveryService::new(database.clone(), delivery_websocket_manager.clone())
+        );
+
+        let app_state = crate::routes::AppState {
+            fcm_service: self.fcm_service.clone(),
+            database,
+            websocket_manager: crate::websocket::WebSocketManager::new(),
+            delivery_websocket_manager: (*delivery_websocket_manager).clone(),
+            enhanced_delivery_service,
+            metrics: crate::metrics::MetricsCollector::new().unwrap(),
+            analytics_service,
+        };
+        
+        let app = create_routes(self.firebase_auth.clone(), app_state)
             .layer(cors_layer())
             .layer(middleware::from_fn(logging_middleware))
             .layer(TraceLayer::new_for_http());

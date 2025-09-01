@@ -1,15 +1,36 @@
 use crate::auth::firebase::FirebaseAuth;
+use crate::auth::models::User;
 use crate::error::{AppError, Result};
 use axum::{
-    extract::State,
-    http::{HeaderMap, Request},
+    extract::{FromRequestParts, State},
+    http::{HeaderMap, Request, request::Parts},
     middleware::Next,
     response::Response,
 };
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub type SharedFirebaseAuth = Arc<Mutex<FirebaseAuth>>;
+
+// Extractor for authenticated users
+impl<S> FromRequestParts<S> for User
+where
+    S: Send + Sync,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> std::result::Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<User>()
+            .cloned()
+            .ok_or(AppError::Unauthorized)
+    }
+}
 
 pub async fn auth_middleware(
     State(firebase_auth): State<SharedFirebaseAuth>,

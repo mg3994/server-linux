@@ -27,11 +27,34 @@ pub enum PaymentStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PaymentMethod {
+    // Traditional methods
     CreditCard,
     DebitCard,
-    DigitalWallet,
-    BankTransfer,
     Cash,
+    
+    // India-specific digital payment methods
+    UPI,           // Unified Payments Interface
+    Paytm,         // Paytm wallet
+    PhonePe,       // PhonePe wallet
+    GooglePay,     // Google Pay (Tez)
+    AmazonPay,     // Amazon Pay
+    MobiKwik,      // MobiKwik wallet
+    FreeCharge,    // FreeCharge wallet
+    
+    // Banking methods
+    NetBanking,    // Internet banking
+    IMPS,          // Immediate Payment Service
+    NEFT,          // National Electronic Funds Transfer
+    RTGS,          // Real Time Gross Settlement
+    
+    // Buy now, pay later
+    Simpl,         // Simpl BNPL
+    LazyPay,       // LazyPay
+    ZestMoney,     // ZestMoney
+    
+    // Other methods
+    BankTransfer,
+    DigitalWallet,
 }
 
 #[derive(Debug, Deserialize)]
