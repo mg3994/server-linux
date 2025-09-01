@@ -1,9 +1,36 @@
-use crate::database::Database;
+use crate::database::{Database, DatabaseHealth};
 use crate::error::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedSystemInfo {
+    pub health_status: HealthStatus,
+    pub database_health: DatabaseHealth,
+    pub system_resources: SystemResources,
+    pub performance_metrics: PerformanceMetrics,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemResources {
+    pub cpu_cores: u32,
+    pub total_memory_mb: u64,
+    pub available_memory_mb: u64,
+    pub disk_space_gb: u64,
+    pub network_interfaces: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub requests_per_second: f64,
+    pub average_response_time_ms: u64,
+    pub error_rate_percent: f64,
+    pub cache_hit_rate_percent: f64,
+    pub database_query_time_ms: u64,
+    pub websocket_connections: u32,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthStatus {
@@ -260,6 +287,42 @@ impl HealthChecker {
     async fn is_cache_ready(&self) -> bool {
         // For in-memory cache, always ready
         true
+    }
+
+    /// Enhanced system monitoring with detailed metrics
+    pub async fn get_detailed_system_info(&self) -> Result<DetailedSystemInfo> {
+        let health_status = self.check_health().await?;
+        let db_health = self.database.health_check().await?;
+        
+        Ok(DetailedSystemInfo {
+            health_status,
+            database_health: db_health,
+            system_resources: self.get_system_resources().await,
+            performance_metrics: self.get_performance_metrics().await,
+        })
+    }
+
+    async fn get_system_resources(&self) -> SystemResources {
+        // Mock system resource monitoring - in production would use system APIs
+        SystemResources {
+            cpu_cores: num_cpus::get() as u32,
+            total_memory_mb: 8192, // Mock value
+            available_memory_mb: 4096, // Mock value
+            disk_space_gb: 500, // Mock value
+            network_interfaces: vec!["eth0".to_string(), "lo".to_string()],
+        }
+    }
+
+    async fn get_performance_metrics(&self) -> PerformanceMetrics {
+        // Mock performance metrics - in production would track real metrics
+        PerformanceMetrics {
+            requests_per_second: 150.0,
+            average_response_time_ms: 45,
+            error_rate_percent: 0.1,
+            cache_hit_rate_percent: 85.0,
+            database_query_time_ms: 12,
+            websocket_connections: 1000,
+        }
     }
 }
 

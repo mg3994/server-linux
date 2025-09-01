@@ -3,6 +3,23 @@ use crate::error::Result;
 use crate::orders::models::{Order, OrderStatus, Address};
 use crate::payments::models::{Payment, PaymentStatus};
 use uuid::Uuid;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabasePoolStats {
+    pub active_connections: u32,
+    pub idle_connections: u32,
+    pub max_connections: u32,
+    pub min_connections: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseHealth {
+    pub is_healthy: bool,
+    pub response_time_ms: u64,
+    pub error_message: Option<String>,
+    pub pool_stats: DatabasePoolStats,
+}
 
 #[derive(Clone)]
 pub struct Database {
@@ -17,6 +34,42 @@ impl Database {
 
     pub fn pool(&self) -> &PgPool {
         &self.pool
+    }
+
+    /// Get database connection pool statistics
+    pub fn get_pool_stats(&self) -> DatabasePoolStats {
+        DatabasePoolStats {
+            active_connections: self.pool.size() as u32,
+            idle_connections: self.pool.num_idle() as u32,
+            max_connections: self.pool.options().get_max_connections(),
+            min_connections: self.pool.options().get_min_connections(),
+        }
+    }
+
+    /// Health check for database connectivity
+    pub async fn health_check(&self) -> Result<DatabaseHealth> {
+        let start = std::time::Instant::now();
+        
+        match sqlx::query("SELECT 1").fetch_one(&self.pool).await {
+            Ok(_) => {
+                let response_time = start.elapsed();
+                Ok(DatabaseHealth {
+                    is_healthy: true,
+                    response_time_ms: response_time.as_millis() as u64,
+                    error_message: None,
+                    pool_stats: self.get_pool_stats(),
+                })
+            }
+            Err(e) => {
+                let response_time = start.elapsed();
+                Ok(DatabaseHealth {
+                    is_healthy: false,
+                    response_time_ms: response_time.as_millis() as u64,
+                    error_message: Some(e.to_string()),
+                    pool_stats: self.get_pool_stats(),
+                })
+            }
+        }
     }
 
     pub async fn create_order(&self, order: &Order) -> Result<Order> {

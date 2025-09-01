@@ -6,6 +6,8 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 
+pub mod performance;
+
 pub fn cors_layer() -> CorsLayer {
     CorsLayer::new()
         .allow_origin("*".parse::<HeaderValue>().unwrap())

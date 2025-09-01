@@ -181,6 +181,15 @@ impl RedisCacheService {
             .await
             .unwrap_or(0);
         
+        // Use config for additional context
+        tracing::debug!(
+            "Cache stats - Entries: {}, Memory: {} bytes, Config max entries: {}, Default TTL: {:?}",
+            total_entries,
+            memory_usage,
+            self.config.max_entries,
+            self.config.default_ttl
+        );
+        
         Ok(CacheStats {
             total_entries,
             hit_count: 0, // Would need to track this separately
@@ -189,6 +198,11 @@ impl RedisCacheService {
             memory_usage,
             expired_entries: 0, // Would need to track this separately
         })
+    }
+
+    /// Get cache configuration
+    pub fn get_config(&self) -> &CacheConfig {
+        &self.config
     }
 
     pub async fn get_or_compute<T, F, Fut>(&self, key: &CacheKey, compute_fn: F) -> Result<T>
